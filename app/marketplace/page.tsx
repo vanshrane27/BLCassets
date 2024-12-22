@@ -13,12 +13,27 @@ export default function Marketplace() {
   const [assets, setAssets] = useState(userAssets.filter(asset => asset.listed))
   const { toast } = useToast()
 
-  const handleBuy = (id: number) => {
-    setAssets(assets.filter(asset => asset.id !== id))
-    toast({
-      title: "Asset Purchased",
-      description: "You have successfully purchased the real estate asset.",
-    })
+  const handleBuy = async (id: number, price: number) => {
+    try {
+      await buyAsset(id, price)
+      toast({
+        title: "Success",
+        description: "Asset purchased successfully!",
+      })
+      // Refresh assets
+      const response = await fetch('/api/assets')
+      const data = await response.json()
+      if (data.success) {
+        setAssets(data.assets.filter(asset => asset.listed))
+      }
+    } catch (error) {
+      console.error('Error buying asset:', error)
+      toast({
+        title: "Error",
+        description: "Failed to purchase asset. Please try again.",
+        variant: "destructive"
+      })
+    }
   }
 
   const handleLike = (id: number) => {
@@ -70,7 +85,7 @@ export default function Marketplace() {
               </div>
             </CardContent>
             <CardFooter className="flex justify-between">
-              <Button onClick={() => handleBuy(asset.id)}>
+              <Button onClick={() => handleBuy(asset.id, asset.price)}>
                 <ShoppingCart className="h-4 w-4 mr-2" />
                 Buy Now
               </Button>

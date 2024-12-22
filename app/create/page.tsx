@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { MapPin, Upload, DollarSign } from 'lucide-react'
+import { useWallet } from '@/app/context/WalletContext'
 
 export default function CreateIPToken() {
   const [title, setTitle] = useState('')
@@ -18,15 +19,44 @@ export default function CreateIPToken() {
   const [value, setValue] = useState('')
   const router = useRouter()
   const { toast } = useToast()
+  const { createAsset, uploadToIPFS } = useWallet()
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Simulate token creation
-    toast({
-      title: "IP Token Created",
-      description: "Your IP has been successfully tokenized as an NFT.",
-    })
-    router.push('/marketplace')
+    try {
+      // Upload documents to IPFS
+      const ipfsHashes = []
+      if (documents) {
+        for (let i = 0; i < documents.length; i++) {
+          const hash = await uploadToIPFS(documents[i])
+          ipfsHashes.push(hash)
+        }
+      }
+
+      // Create asset on blockchain
+      await createAsset({
+        title,
+        description,
+        location,
+        image: ipfsHashes[0], // Use first document as main image
+        value: parseFloat(value),
+        type: 'building', // You might want to add this to your form
+        size: '0', // You might want to add this to your form
+      })
+
+      toast({
+        title: "Asset Created",
+        description: "Your asset has been created on the blockchain.",
+      })
+      router.push('/profile')
+    } catch (error) {
+      console.error('Error creating asset:', error)
+      toast({
+        title: "Error",
+        description: "Failed to create asset. Please try again.",
+        variant: "destructive",
+      })
+    }
   }
 
   return (
